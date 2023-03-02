@@ -1,0 +1,22 @@
+{
+  "name": "kebab-case",
+  "version": "1.0.0",
+  "description": "projeto de backend da Labenu",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "jogo": "node pedra-pappel-e-tesoura.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AdrianoSilva42/labecommerce-backend.git"
+  },
+  "author": "Adriano Silva",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AdrianoSilva42/labecommerce-backend/issues"
+  },
+  "homepage": "https://github.com/AdrianoSilva42/labecommerce-backend#readme"
+}
