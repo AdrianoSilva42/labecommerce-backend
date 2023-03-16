@@ -1,22 +1,69 @@
-import {user, products, purchase, createUser, getAllUsers, createdProduct, getAllProduct, getProductById, queryProductsByName, createPurchase, getAllPurchasesFromUserId} from "./database"
-import { Category } from "./types"
+import {user, products, purchase} from "./database"
+import { Category, Tcliente, Tproduto, Tcompra } from "./types"
 
-// console.table(user)
-// console.table(products)
-// console.table(purchase)
+import express, {Request, Response} from 'express'
+import cors from 'cors'
 
-// createUser("003", "ciente03@email.com", "125478")
+const app = express();
 
-// console.table(getAllUsers())
+app.use(express.json());
+app.use(cors());
 
-// createdProduct('p003', 'Teclado sem fio', 210, Category.ELETRONICS)
+app.listen(3003, () => {
+    console.log("Servidor rodando na porta 3003");
+    
+});
 
-// console.table(getAllProduct())
+//getAllUsers - Devolve todo o Array de usuarios
+app.get('/users', (req:Request, res:Response) => {
+    res.status(200).send(user)
+});
 
- getProductById("p002")
+//getAllProduct - Devolve todo o Array de produtos
+app.get('/products', (req:Request, res:Response) => {
+    res.status(200).send(products)
+});
 
-// queryProductsByName('MEMORIA RAM')
+//getProductByName - Devolve um produto expecifico do Array de produtos pelo seu nome
+app.get('/products/search', (req:Request, res:Response) => {
+    const q = req.query.q as string
 
-// createPurchase("003", "p002", 4, 500 )
+    const result = products.filter(product => product.nome.toLowerCase().includes(q.toLowerCase()))
 
-// getAllPurchasesFromUserId("004")
+    res.status(200).send(result)
+});
+
+//postCreateUser - Criar um novo usuario no Array de usuarios
+app.post('/users', (req:Request, res:Response) => {
+
+    const {id, email, senha}: Tcliente = req.body
+
+    const newUser = {id, email, senha}
+
+    user.push(newUser)
+
+    res.status(201).send('Novo usuario cadastrado com sucesso!!')
+});
+
+//postCreatedProduct - Cria um novo produto no Array de produtos
+app.post('/products', (req:Request, res:Response) => {
+    
+    const {id, nome, preco, categoria}: Tproduto = req.body
+
+    const newProduct = {id, nome, preco, categoria}
+
+    products.push(newProduct)
+
+    res.status(201).send("Novo produto cadastrado com sucesso!!")
+});
+
+//postCreatedPurchase - Cria uma nova compra no Array de compras
+app.post('/purchases', (req:Request, res:Response) => {
+    const {userId, produtoId, qtd, precoTotal}: Tcompra = req.body
+
+    const newCompra = {userId, produtoId, qtd, precoTotal}
+
+    purchase.push(newCompra)
+
+    res.status(201).send("Nova compra realizada com sucesso!!")
+});
