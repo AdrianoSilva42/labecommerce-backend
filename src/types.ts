@@ -14,7 +14,7 @@ export type Tcliente = {
 export type Tproduto = {
     id: string,
     nome: string,
-    preco: number,
+    preco?: number,
     categoria: Category
 };
 
