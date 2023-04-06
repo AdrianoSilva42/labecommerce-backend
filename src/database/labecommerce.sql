@@ -26,6 +26,35 @@ VALUES ("p001", "Monitor", 95.80, "Eletrônicos"),
        ("p005", "Tenis AllStar", 110.80, "Roupas e calçados");
 
 
+CREATE TABLE purchases(
+    id TEXT PRIMARY KEY UNIQUE NOT NULL,
+    total_price REAL NOT NULL,
+    paid INTEGER NOT NULL,
+    delivered_at TEXT,
+    buyer_id TEXT NOT NULL, --FK
+    FOREIGN KEY(buyer_id) REFERENCES userd(id)
+--Essa é uma relação de 1:m
+);
+
+INSERT INTO purchases(id, total_price, paid, delivered_at, buyer_id) 
+VALUES ("pe001", 191.6, 1, "", "001"),
+       ("pe002", 50, 1, "", "001"),
+       ("pe003", 71, 1, "", "002"),
+       ("pe004", 31.6, 1, "", "002"),
+       ("pe005", 221.6, 1, "", "003"),
+       ("pe006", 47.4, 1, "", "003");
+
+SELECT * FROM purchases;
+
+UPDATE purchases 
+SET delivered_at = DATETIME('now', 'localtime')
+WHERE id = "pe005";
+
+SELECT * FROM purchases
+INNER JOIN users
+ON purchases.buyer_id = users.id
+WHERE users.id = "003";
+
 --Get All Users
 SELECT * FROM users;
 
