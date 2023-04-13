@@ -1,8 +1,10 @@
 -- Active: 1680010538926@@127.0.0.1@3306
 CREATE TABLE users(
     id TEXT PRIMARY KEY UNIQUE NOT NULL,
+    name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
 
 INSERT INTO users(id, email, password)
@@ -11,11 +13,12 @@ VALUES ("001", "usuario01@email.com", "123456"),
        ("003", "usuario03@email.com", "456123");
 
 
-CREATE TABLE products(
+CREATE TABLE product(
     id TEXT PRIMARY KEY UNIQUE NOT NULL,
     name TEXT NOT NULL,
     price REAL NOT NULL,
-    category TEXT NOT NULL
+    description TEXT NOT NULL,
+    image_url TEXT NOT NULL
 );
 
 INSERT INTO products(id, name, price, category)
@@ -29,11 +32,13 @@ VALUES ("p001", "Monitor", 95.80, "Eletrônicos"),
 -- implementação da branch relações-sql-l
 CREATE TABLE purchases(
     id TEXT PRIMARY KEY UNIQUE NOT NULL,
+    buyer TEXT NOT NULL,
     total_price REAL NOT NULL,
-    paid INTEGER NOT NULL,
-    delivered_at TEXT,
-    buyer_id TEXT NOT NULL, --FK
-    FOREIGN KEY(buyer_id) REFERENCES userd(id)
+    created_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime')),
+    paid INTEGER NOT NULL
+    --delivered_at TEXT,
+    --buyer_id TEXT NOT NULL, --FK
+    --FOREIGN KEY(buyer) REFERENCES users(id)
 --Essa é uma relação de 1:m
 );
 
@@ -97,7 +102,7 @@ SELECT * FROM products
 WHERE name = 'Monitor';
 
 --Created User
-INSERT INTO users(id, email, password)
+INSERT INTO users(id, name, email, password, created_at)
 VALUES('004', 'usuario04@email.com', '28456');
 
 --Created Product
