@@ -18,12 +18,15 @@ app.listen(3003, () => {
 //getAllUsers - Devolve todo o Array de usuarios
 app.get('/users', async (req:Request, res:Response) => {
     try{
-        const results = await db.raw(`
-            SELECT * FROM users;
-        `) 
-        res.status(200).send(results)
-    } catch(e) {
-        console.log(e)
+     //query builder para retornar todos os usuarios da tabela 'users'  
+        const user = await db.select("*").from("users")
+
+        res.status(200).send(user)
+    } catch(e: any){
+        if(res.statusCode === 200){
+            res.status(500)
+        }
+        res.send(e.message)
     }
     
 });
@@ -31,34 +34,44 @@ app.get('/users', async (req:Request, res:Response) => {
 //getAllProduct - Devolve todo o Array de produtos
 app.get('/products', async (req:Request, res:Response) => {
     try{
-        const results = await db.raw(`
-            SELECT * FROM product;
-        `)
-        res.status(200).send(results)
-    } catch(e){
-        console.log(e)
+    //query builder para retornar todos os produtos da tabela 'products' 
+        const product = await db.select("*").from("product")
+
+        res.status(200).send(product)
+    } catch(e: any){
+        if(res.statusCode === 200){
+            res.status(500)
+        }
+        res.send(e.message)
     }
 });
 
 //getProductByName - Devolve um produto expecifico do Array de produtos pelo seu nome
 app.get('/products/search', async (req:Request, res:Response) => {
     try{
+    //armazenando o termo de busca na constante 'q'
         const q = req.query.q as string
 
-        if(q.length < 1){
+    //deixando o termo de busca todo em letras minusculas
+        const query = q.toLowerCase()
+        
+    //verificando se o termo de busca contem algo escrito, mesmo que seja 1 letra.
+        if(query.length < 1){
+            
             res.status(404)
             throw new Error("O termo de busca deve conter pelo menos 1 caractere.")
         };
 
-        // const result = products.filter(product => product.nome.toLowerCase().includes(q.toLowerCase()))
+    //query builder para buscar o produto pelo seu nome e armazenando na constante 'productByName'
+        const productByName = await db.select("*").from("product").where("name", "=", query)
 
-        const result = await db.raw(`
-            SELECT * FROM products
-            
-            WHERE name = "${q}"; 
-        `) //Perguntar onde aplicar o metodo .toLowerCase() !!!!
+    //verificando se foi retornado algum produto, caso não tenha sido, avisar que houve algum erro no termo de busca
+        if(productByName.length === 0 ){
+            res.status(400)
+            throw new Error("Não foram encontrados produtos com esse nome. Tente iniciar a busca com a primeira letra maiscula.")
+        }
     
-        res.status(200).send(result)
+        res.status(200).send(productByName)
     } catch(e: any){
         console.log(e)
         if(res.statusCode === 200){
@@ -74,6 +87,7 @@ app.post('/users', async (req:Request, res:Response) => {
         
         const {id, name, email, password, created_at} = req.body
 
+    //verificando se todos os campos foram preenchidos
         if(!id && !name && !email && !password && !created_at){
             res.status(400)
             throw new Error("É necessario preencher todos os 5 campos do body.")
@@ -114,14 +128,17 @@ app.post('/users', async (req:Request, res:Response) => {
             }
         };
 
-        // const newUser = {id, email, password}
-    
-        // user.push(newUser)
-
-        await db.raw(`
-        INSERT INTO users(id, name, email, password, created_at)
-        VALUES ("${id}", "${name}", "${email}", "${password}", "${created_at}");
-        `)
+    //modelando o objeto que sera inserido na tabela, ao invés de fazer isso no proprio insert. Isso é considerado uma boa pratica
+        const newUser = {
+            id: id,
+            name: name,
+            email: email,
+            password: password
+        }
+        
+        
+    //query builder para inserir um novo usuario na tabela 'users' 
+        await db("users").insert(newUser)
     
         res.status(201).send('Novo usuario cadastrado com sucesso!!')
     } catch(e: any){
@@ -137,57 +154,48 @@ app.post('/users', async (req:Request, res:Response) => {
 app.post('/products', async (req:Request, res:Response) => {
     try{
         const {id, name, price, description, image_url} = req.body
+    
+    //fazendo com que o nome do produto seja cadastrado em letras minusculas
+        const nameLowerCase = name.toLowerCase()
 
         //const ids = products.map(produto => {return produto.id})
         if(id !== undefined){
             if(id.length < 4 || id[0] !== 'p'){
                 res.status(400)
-                throw new Error("O 'id' do produto deve conter 4 caracteres(uma letra p e tres numeros).") 
+                throw new Error("O 'id' do produto deve conter 4 caracteres(uma letra p e tres números).") 
             }
-
-            // if(ids.includes(id)){
-            //     res.status(400)
-            //     throw new Error("O 'id' não pode ser igual a um já existente")
-            // }
 
             if(id[0] !== 'p'){
                 res.status(400)
-                throw new Error("O 'id' deve iniciar com a letra 'p'.")
+                throw new Error("O 'id' deve iniciar com a letra 'p' minusculo.")
             }
         };
 
-        if(!name){
+        if(!nameLowerCase){
             res.status(400)
             throw new Error("É necessario informar o nome do produto.")
         };
 
         if(!price || typeof price !== 'number'){
             res.status(400)
-            throw new Error("É necessario informar um valor e que ele seja um 'number'.")
+            throw new Error("É necessario informar um valor e que ele seja um 'número'.")
         };
 
-        // if(!categoria){
-        //     res.status(400)
-        //     throw new Error("É necessario informar uma das categorias entre: Acessorios, Roupas e calçados, Eletronicos")
-        // };
 
-        // if(categoria !== undefined){
-        //     if(categoria !== Category.ACCESSORIES && categoria !== Category.CLOTHES_AND_SHOES && categoria !== Category.ELETRONICS){
-        //         res.status(400)
-        //         throw new Error("A categoria deve ser um tipo valida: Acessorios, Roupas e calçados, Eletronicos")
-        //     }
-        // };
+    //modelando o objeto que sera inserido na tabela, ao invés de fazer isso no proprio insert. Isso é considerado uma boa pratica
+        const newProduct = {
+            id: id,
+            name: nameLowerCase,
+            price: price,
+            description: description,
+            image_url: image_url
+        };
 
-        // const newProduct = {id, nome, preco, categoria}
-    
-        // products.push(newProduct)
-
-        await db.raw(`
-            INSERT INTO product(id, name, price, description, image_url)
-            VALUES("${id}", "${name}", "${price}", "${description}", "${image_url}")
-        `)
+    //query builder para inserir um novo produto na tabela 'peoduct'
+        await db("product").insert(newProduct)
     
         res.status(201).send("Novo produto cadastrado com sucesso!!")
+
     } catch(e: any){
         if(res.statusCode === 200){
             res.status(500)
@@ -200,7 +208,7 @@ app.post('/products', async (req:Request, res:Response) => {
 //postCreatedPurchase - Cria uma nova compra no Array de compras
 app.post('/purchases', async (req:Request, res:Response) => {
     try{
-        const {id, buyer, total_price, created_at, paid} = req.body
+        const {id, buyer, total_price, paid, products} = req.body
 
         if(id !== undefined){
             if(id.length < 4){
@@ -208,10 +216,7 @@ app.post('/purchases', async (req:Request, res:Response) => {
                 throw new Error("O id deve conter 4 caracteres. Iniciando pela letra 'c', seguido por 3 números.")
             }
 
-            const result = await db.raw(`
-                SELECT * FROM purchases
-                WHERE id = "${id}";
-            `)
+            const result = await db.select("*").from("purchases").where("id", "=", id)
 
             if(result.includes(id)){
                 res.status(404)
@@ -220,10 +225,8 @@ app.post('/purchases', async (req:Request, res:Response) => {
         };
 
         if(buyer !== undefined){
-            const result = await db.raw(`
-                SELECT * FROM purchases
-                WHERE buyer = "${buyer}"
-            `)
+           
+            const result = await db.select("*").from("purchases").where("buyer", "=", buyer)
 
             if(result.includes(buyer)){
                 res.status(404)
@@ -243,10 +246,43 @@ app.post('/purchases', async (req:Request, res:Response) => {
             throw new Error("Digite '0' para false ou '1' para true.")
         };
 
-        await db.raw(`
-            INSERT INTO purchases(id, buyer, total_price,  paid)
-            VALUES("${id}", "${buyer}", ${total_price},  ${paid})
-        `)
+        // if(products !== undefined){
+        //     const ids = await db.select("id").from("product")
+        //      products.map(async (product: any) =>{
+        //         const [results] = await db.select("id").from("product").where("id", "=", product.id)
+    
+        //         if(!results.id.includes(ids)){
+        //             res.status(404)
+        //             throw new Error("Um produto não existente foi selecionado. Verique e tente novamente.")
+        //         }
+        //         console.log(results)
+        //     })
+        // };
+
+    //modelando o objeto que sera inserido na tabela, ao invés de fazer isso no proprio insert. Isso é considerado uma boa pratica
+        const newPurchase = {
+            id: id,
+            buyer: buyer,
+            total_price: total_price,
+            paid: paid
+        }
+
+    //query builder para inserir uma nova compra na tabela 'purchases'
+        await db("purchases").insert(newPurchase)
+
+
+    //aqui estou fazendo um map no 'products', que foi recebido pelo body do purchases. Crio uma const e atribuo o id do objeto acima newPurchase, o id do produto do 'products' recebido no body e a quantidade também recebido do 'products'.
+        products.map(async (product: any) => {
+            const newItem = {
+                purchase_id: newPurchase.id,
+                product_id: product.id,
+                quantity: product.quantity
+            }
+
+        //insiro as infos do objeto newItem que foi feito no map acima na tabela 'purchases_products
+            await db("purchases_products").insert(newItem)
+        });
+        
         
         res.status(201).send("Nova compra realizada com sucesso!!")
     } catch(e: any){
@@ -260,17 +296,14 @@ app.post('/purchases', async (req:Request, res:Response) => {
 //getProductsById - Procurar um produto expecifico do Array de produtos pelo id
 app.get('/products/:id', async (req:Request, res:Response) => {
     try{
+    //armazenando o query param em uma constante
         const id = req.params.id 
     
-        //const resultado: Tproduto | undefined = products.find(product => product.id === id)
-        const resultado = await db.raw(`
-            SELECT * FROM product
-            WHERE id = "${id}";
-        `)
-
-         if(resultado[0].id !== id){
-                console.log(resultado)
-                console.log(id)
+    //query builder que busca um determinado produto por seu id
+        const [resultado] = await db.select("*").from("product").where("id", "=", id)
+        
+        
+         if(!resultado){
                 res.status(400)
                 throw new Error("Esse produto não existe. Tente novamente com um 'id' valido")
             }
@@ -296,21 +329,17 @@ app.get('/products/:id', async (req:Request, res:Response) => {
 //getUserPurchasesByUserId - Procurar compras feita do usuario pelo id do usuario
 app.get('/users/:id/purchases', async (req:Request, res:Response) => {
     try{
+    //armazenando o query param em uma constante
         const id = req.params.id
 
-        //const resultado: Tcompra | undefined = purchase.find(compra => compra.userId === id)
-        const resultado = await db.raw(`
-            SELECT * FROM purchases
-            WHERE buyer = "${id}";
-        `)
+    //query param que busca compra de um determinado usuario pelo o id do mesmo
+        const [resultado] = await db.select("*").from("purchases").where("buyer", "=", id)
 
-        if(resultado[0].buyer !== id){
-            res.status(400)
-            console.log(resultado)
-            console.log(id)
+        if(!resultado){
+            res.status(404)
             throw new Error("Esse usuario não existe, logo não existem compras feitas no mesmo. Digite um usuario valido.")
         };
-    
+        console.log(resultado.lengt)
         res.status(200).send(resultado)
     }catch(e: any){
         if(res.statusCode === 200){
@@ -321,21 +350,33 @@ app.get('/users/:id/purchases', async (req:Request, res:Response) => {
 });
 
 //deleteUserById - Deletar um usuario utilizando o seu id
-app.delete('/user/:id', (req:Request, res:Response) => {
+app.delete('/user/:id', async (req:Request, res:Response) => {
     try{
         const id = req.params.id
 
-        const index = user.findIndex(usuario => usuario.id === id)
+        // const index = user.findIndex(usuario => usuario.id === id)
 
-        const usuarios = user.map(users => {return users.id})
-        if(!usuarios.includes(id)){
-            res.status(400)
-            throw new Error("Digite o 'id' de um usuario existente.")
-        }
+        // const usuarios = user.map(users => {return users.id})
+        // if(!usuarios.includes(id)){
+        //     res.status(400)
+        //     throw new Error("Digite o 'id' de um usuario existente.")
+        // }
     
-        if(index >= 0){
-            user.splice(index, 1)
-        };
+        // if(index >= 0){
+        //     user.splice(index, 1)
+        // };
+
+    //atribuindo o usuario a constante 'user', caso ele seja encontrado na tabela users pelo id informado
+        const [user] = await db.select("*").from("users").where({id: id})
+
+    //testando se a const 'user' possui alguma coisa
+        if(!user){
+            res.status(404)
+            throw new Error("'id' não encontrado")
+        }
+        
+    //query builder que deleta um usuario da tabela de 'users'
+        await db.delete().from("users").where({id: id})
     
         res.status(200).send("Usuario apagado com sucesso")
     }catch(e: any){
@@ -347,22 +388,33 @@ app.delete('/user/:id', (req:Request, res:Response) => {
 });
 
 //deleteProductById - Deletar um produto utilizando o seu id
-app.delete('/products/:id', (req:Request, res:Response) => {
+app.delete('/products/:id', async (req:Request, res:Response) => {
     try{
         const id = req.params.id
 
-        const index = products.findIndex(produto => produto.id === id)
+        // const index = products.findIndex(produto => produto.id === id)
 
-        const produtos = products.map(product => {return product.id})
-        if(!produtos.includes(id)){
-            res.status(400)
+        // const produtos = products.map(product => {return product.id})
+        // if(!produtos.includes(id)){
+        //     res.status(400)
+        //     throw new Error("Digite o 'id' de um produto existente.")
+        // }
+    
+        // if(index >= 0){
+        //     products.splice(index, 1)
+        // };
+    
+    //atribuindo o produto a constante 'produto', caso ele seja encontrado na tabela product pelo id informado
+        const [produto]  = await db.select("*").from("product").where({id: id})
+
+        if(!produto){
+            res.status(404)
             throw new Error("Digite o 'id' de um produto existente.")
         }
-    
-        if(index >= 0){
-            products.splice(index, 1)
-        };
-    
+
+    //query builder para apagar um produto da tabela 'product' 
+        await db.delete().from("product").where({id: id})
+
         res.status(200).send("Produto apagado com sucesso")
     }catch(e:any){
         if(res.statusCode === 200){
@@ -373,25 +425,27 @@ app.delete('/products/:id', (req:Request, res:Response) => {
 });
 
 //editUserById - Editar um usuario expecifico. Encontrando ele por seu id
-app.put('/user/:id', (req:Request, res:Response) => {
+app.put('/user/:id', async (req:Request, res:Response) => {
     try{
         const id = req.params.id
 
         const newId = req.body.id as string | undefined
+        const newName = req.body.name as string | undefined
         const newEmail = req.body.email as string | undefined
-        const newSenha = req.body.senha as string | undefined
+        const newPassword = req.body.password as string | undefined
 
-        const usuarios = user.map(usuario => {return usuario.id})
-        if(!usuarios.includes(id)){
-            
-            res.status(400)
-            throw new Error("Digite um 'id' valido para editar o usuario em questão.")
-        };
 
         if(newId !== undefined){
             if(newId.length < 3){
                 res.status(400)
                 throw new Error("O 'id' do usuario deve conter 3 digitos iniciando com 0(Ex: '003', '008', '012').")
+            }
+        };
+
+        if(newName !== undefined){
+            if(newName.length === 0){
+                res.status(400)
+                throw new Error("O nome deve conter no minimo 1 caracter.")
             }
         };
 
@@ -408,19 +462,30 @@ app.put('/user/:id', (req:Request, res:Response) => {
             }
         };
 
-        if(newSenha !== undefined){
-            if(newSenha.length < 6){
+        if(newPassword !== undefined){
+            if(newPassword.length < 6){
                 res.status(400)
                 throw new Error("A senha deve conter no minimo 6 digitos.")
             }
         };
 
-        const result: Tcliente | undefined = user.find(usuario => usuario.id === id)
+    //atribuindo todas as infos do usuario expecifo a constante 'usuario'
+        const [usuario] = await db.select("*").from("users").where({"id": id}) 
     
-        if(result){
-            result.id = newId || result.id
-            result.email = newEmail || result.email
-            result.senha = newSenha || result.senha
+    //aqui, se o id digitado do usuario existir, vamos entrar nesse bloco e, toda a informação do body sera atribuida a constante 'updateUser'. E em seguida sera upado pra tabela 'users' as modificações
+        if(usuario){
+           const updateUser = {
+            id: newId || usuario.id,
+            name: newName || usuario.name,
+            email: newEmail || usuario.email,
+            password: newPassword || usuario.password
+           }
+
+        //query builder que  atualiza as informações do usuario expecifico na tabela 'users'
+           await db("users").update(updateUser).where({id: id})
+        }else{
+            res.status(404)
+            throw new Error("Digite um 'id' valido para editar o usuario em questão.")
         };
     
         res.status(200).send("Cadastro atualizado com sucesso")
@@ -433,20 +498,19 @@ app.put('/user/:id', (req:Request, res:Response) => {
 });
 
 //editProductById - Editar um produto expecifico. Encontrando ele por seu id
-app.put('/products/:id', (req:Request, res:Response) => {
+app.put('/products/:id', async (req:Request, res:Response) => {
     try{
         const id = req.params.id
 
         const newId = req.body.id as string | undefined
-        const newNome = req.body.nome as string | undefined
-        const newPreco = req.body.preco as number 
-        const newCategoria = req.body.categoria as Category | undefined
+        const newName = req.body.name as string | undefined
+        const newPrice = req.body.price as number 
+        //const newCategoria = req.body.categoria as Category | undefined
+        const newDescription = req.body.description as string | undefined
+
+    //forçando com que o nome do produto seja em letras minusculos, caso ele seja alterado.
+        const newNameLowerCase = newName?.toLowerCase()
     
-        const idProduto = products.map(path => {return path.id})
-        if(!idProduto.includes(id)){
-            res.status(400)
-            throw new Error("Digite um 'id' valido para editar o produto em questão.")
-        };
 
         if(newId !== undefined){
             if(newId[0] !== 'p'){
@@ -455,34 +519,112 @@ app.put('/products/:id', (req:Request, res:Response) => {
             }
         };
 
-        if(!newNome){
-            res.status(400)
-            throw new Error("O produto pecisa conter um nome.")
-        };
+        // if(!newNome){
+        //     res.status(400)
+        //     throw new Error("O produto pecisa conter um nome.")
+        // };
 
-        if(newPreco === undefined){
+        if(newPrice === 0){
             res.status(400)
             throw new Error("O produto precisa de um preço.")
         }
 
-        if(newCategoria !== undefined){
-            if(newCategoria !== Category.ACCESSORIES && newCategoria !== Category.CLOTHES_AND_SHOES && newCategoria !== Category.ELETRONICS ){
+        // if(newCategoria !== undefined){
+        //     if(newCategoria !== Category.ACCESSORIES && newCategoria !== Category.CLOTHES_AND_SHOES && newCategoria !== Category.ELETRONICS ){
+        //         res.status(400)
+        //         throw new Error("A categoria deve ser um tipo valida: Acessorios, Roupas e calçados, Eletronicos")
+        //     }
+        // };
+
+        if(newDescription !== undefined){
+            if(newDescription.length === 0){
                 res.status(400)
-                throw new Error("A categoria deve ser um tipo valida: Acessorios, Roupas e calçados, Eletronicos")
+                throw new Error("O produto precisa de uma descrição")
             }
-        };
+        }
     
-        const result: Tproduto | undefined = products.find(produto => produto.id === id)
+      const [produto] = await db.select("*").from("product").where({id: id})
     
-        if(result){
-            result.id = newId || result.id
-            result.nome = newNome || result.nome
-            result.preco = isNaN(newPreco) ? result.preco : Number(newPreco)
-            result.categoria  = newCategoria || result.categoria
+        if(produto){
+            const updateProduct = {
+                id: newId || produto.id,
+                name: newNameLowerCase || produto.name,
+                price: isNaN(newPrice) ? produto.price : newPrice,
+                //categoria: newCategoria || produto.categoria
+                description: newDescription || produto.description 
+            }
+           
+            await db("product").update(updateProduct).where({id: id})
+        }else{
+            res.status(404)
+            throw new Error("Digite um 'id' valido para editar o produto em questão.")
         };
     
         res.status(200).send("Produto atualizado com sucesso")
     }catch(e: any){
+        if(res.statusCode === 200){
+            res.status(500)
+        }
+        res.send(e.message)
+    }
+});
+
+
+//getPurchaseById - Procurar uma compra expecifica do Array de 'purchases' pelo id
+app.get('/purchases/:id', async (req:Request, res:Response) => {
+    try{
+        const idPurchase = req.params.id
+        
+    //query builder para selecionar todas as colunas da tabela 'purchases' que tenham o id parecido com o recebido por parametro.
+        const compras = await db.select("*").from("purchases").where("id", "=", idPurchase)
+
+        if(compras.length === 0){
+            res.status(404)
+            throw new Error("Compra não encontrada. Tente um outro 'id'.")
+        }
+
+        if(compras[0].id === idPurchase){
+        
+        //esse query builder vai fazer uma busca e selecionar as colunas expecificadas da tabela 'purchase' e fazer um join entra a tabela purchases e a tabela users. E guardo o resultado dessa busca na const compra.
+            const [compra] = await db("purchases")
+            .select(
+                "purchases.id AS IdCompra",
+                "purchases.total_price AS TotalCompra",
+                "purchases.created_at AS DataCompra",
+                "purchases.paid AS StatusPagamento",
+                "purchases.buyer AS IdComprador",
+                "users.email AS EmailComprador",
+                "users.name AS NomeComprador", 
+            ).innerJoin(
+               "users","purchases.buyer","=","users.id" 
+            ).where({"purchases.id": idPurchase}) 
+
+         //esse query builder vai fazer uma busca e selecionar as colunas expecificadas da tabela 'product' e fazer um join entra a tabela 'product' e a tabela 'purchases_products'. E guardo o resultado dessa busca na const produto.
+            const produto = await db("product")
+            .select(
+                "product.id AS id_produto",
+                "product.name",
+                "product.price",
+                "product.description",
+                "product.image_url",
+                "purchases_products.quantity AS quantity")
+                .innerJoin("purchases_products", "product.id", "=", "purchases_products.product_id")
+                .where({"purchases_products.purchase_id": idPurchase})
+        
+
+        //aqui eu estou atribuindo o valor da busca guardada em 'produto', na propriedade 'product_list' do objeto que se encontra na const compra.
+            compra.product_list = produto
+            compra.StatusPagamento = 0 ? 'false': 'true'
+
+            
+            
+            res.status(200).send(compra)
+        }else{
+            res.status(404)
+            throw new Error("'id' de usuario inexistente")
+        };
+    }
+    catch(e: any){
         if(res.statusCode === 200){
             res.status(500)
         }

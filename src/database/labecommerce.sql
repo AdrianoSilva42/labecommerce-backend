@@ -4,7 +4,7 @@ CREATE TABLE users(
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime'))
 );
 
 INSERT INTO users(id, email, password)
@@ -31,24 +31,27 @@ VALUES ("p001", "Monitor", 95.80, "Eletrônicos"),
 
 -- implementação da branch relações-sql-l
 CREATE TABLE purchases(
-    id TEXT PRIMARY KEY UNIQUE NOT NULL,
-    buyer TEXT NOT NULL,
+    id TEXT PRIMARY KEY NOT NULL,
     total_price REAL NOT NULL,
     created_at TEXT NOT NULL DEFAULT(DATETIME('now', 'localtime')),
-    paid INTEGER NOT NULL
-    --delivered_at TEXT,
-    --buyer_id TEXT NOT NULL, --FK
-    --FOREIGN KEY(buyer) REFERENCES users(id)
---Essa é uma relação de 1:m
+    paid INTEGER NOT NULL,
+    buyer TEXT NOT NULL, --FK
+    --product_list TEXT, --FK
+    FOREIGN KEY(buyer) REFERENCES users(id) --Essa é uma relação de 1:m
+    --FOREIGN KEY(product_list) REFERENCES product(id) --Essa é uma relação de 1:m
 );
 
-INSERT INTO purchases(id, total_price, paid, delivered_at, buyer_id) 
-VALUES ("c001", 95.80, 1, "", "001"),
-       ("c002", 25, 1, "", "001"),
-       ("c003", 35.50, 1, "", "002"),
-       ("c004", 15.80, 1, "", "002"),
-       ("c005", 110.80, 1, "", "003"),
-       ("c006", 15.80, 1, "", "003");
+SELECT SUM(("price" * "quantity")) FROM 
+
+INSERT INTO purchases(id, total_price, paid, buyer, product_list) 
+VALUES ("c001", 125.5, 1,  "u001", "p001"),
+       ("c002", 20, 1,  "u001", "p005"),
+       ("c003", 75.9, 1,  "u002", "p004"),
+       ("c004", 184.90, 1,  "u002", "p003"),
+       ("c005", 998.9, 1,  "u003", "p002"),
+       ("c006", 20, 1,  "u003", "p005");
+
+       
 
 SELECT * FROM purchases;
 
@@ -69,7 +72,7 @@ CREATE TABLE purchases_products(
     quantity INTEGER NOT NULL,
 
     FOREIGN KEY(purchase_id) REFERENCES purchases(id),
-    FOREIGN KEY(product_id) REFERENCES products(id)
+    FOREIGN KEY(product_id) REFERENCES product(id)
     );
 
 INSERT INTO purchases_products VALUES
@@ -80,15 +83,15 @@ INSERT INTO purchases_products VALUES
 SELECT 
     purchases.buyer_id as usuarioId,
     purchases.id as compraId,
-    products.id as produtoId,
-    products.name as produdoNome,
-    products.price as produtoPreco,
+    product.id as produtoId,
+    product.name as produdoNome,
+    product.price as produtoPreco,
     purchases_products.quantity 
 FROM purchases_products
 INNER JOIN purchases
 ON purchases_products.purchase_id = purchases.id
 INNER JOIN products
-ON purchases_products.product_id = products.id;
+ON purchases_products.product_id = product.id;
 
 
 --Get All Users
@@ -145,3 +148,20 @@ OFFSET 0; --Poderia também não por o OFFSET, ja que pde pra iniciar pelo prime
 SELECT * FROM products
 WHERE price > 10 AND price < 80
 ORDER BY price ASC;
+
+
+SELECT 
+    purchases.id AS IdCompra,
+    purchases.total_price AS TotalCompra,
+    purchases.created_at AS DataCompra,
+    purchases.paid AS EstatusPagamento,
+    purchases.buyer AS Comprador,
+    users.id AS IdComprador,
+    users.email AS EmailComprador,
+    users.name AS NomeComprador
+FROM purchases
+INNER JOIN users
+ON purchases.buyer = users.id
+INNER JOIN product
+ON purchases.product_list = product.id
+-- WHERE purchases.id = 'c001';
